@@ -87,18 +87,30 @@ jobs:
         ELECTRON_CACHE: /tmp/.cache/electron
         ELECTRON_BUILDER_CACHE: /tmp/.cache/electron-builder
 
+    - name: Set safe artifact name
+      id: artifact_name
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          SAFE_NAME="${{ github.event.inputs.version }}"
+        else
+          SAFE_NAME="${{ github.ref_name }}"
+        fi
+        # Remove invalid characters for artifact names
+        SAFE_NAME=$(echo "$SAFE_NAME" | sed 's/[\/\:"<>|*?\r\n\\]/-/g')
+        echo "name=$SAFE_NAME" >> $GITHUB_OUTPUT
+
     - name: Upload macOS artifacts
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: macos-build-${{ github.event.inputs.version || github.ref_name }}
+        name: macos-build-${{ steps.artifact_name.outputs.name }}
         path: dist/*.dmg
 
     - name: Upload Linux artifacts
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: linux-build-${{ github.event.inputs.version || github.ref_name }}
+        name: linux-build-${{ steps.artifact_name.outputs.name }}
         path: |
           dist/*.AppImage
           dist/*.deb
@@ -107,7 +119,7 @@ jobs:
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: windows-build-${{ github.event.inputs.version || github.ref_name }}
+        name: windows-build-${{ steps.artifact_name.outputs.name }}
         path: dist/*.exe
 
   release:
