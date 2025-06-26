@@ -1,0 +1,43 @@
+<!-- settings.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Settings</title>
+  </head>
+  <body>
+    <h2>設定</h2>
+    
+    <div>
+      <label for="slideSpeed">スライド速度 (秒):</label>
+      <input type="number" id="slideSpeed" min="1" max="60" value="5" />
+    </div>
+    <br />
+    
+    <div>
+      <label for="serviceDomain">MicroCMS サービスドメイン:</label>
+      <input type="text" id="serviceDomain" placeholder="your-service-domain" />
+    </div>
+    <br />
+    
+    <div>
+      <label for="apiKey">MicroCMS APIキー:</label>
+      <input type="text" id="apiKey" placeholder="your-api-key" />
+    </div>
+    <br />
+    
+    <div>
+      <label for="endpoint">MicroCMS エンドポイント:</label>
+      <input type="text" id="endpoint" placeholder="contents" value="contents" />
+    </div>
+    <br />
+    
+    <label>
+      <input type="checkbox" id="devTools" /> 開発者ツールを表示
+    </label>
+    <br />
+    <button id="saveBtn">保存</button>
+
+    <script src="settings.js"></script>
+  </body>
+</html>
