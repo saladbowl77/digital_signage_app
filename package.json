@@ -7,7 +7,7 @@
     "start": "electron .",
     "build:linux": "node_modules/.bin/electron-builder --linux",
     "build:mac": "node_modules/.bin/electron-builder --mac",
-    "build:win": "node_modules/.bin/electron-builder --win",
+    "build:win": "electron-builder --win",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
