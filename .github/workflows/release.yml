@@ -71,6 +71,7 @@ jobs:
       run: pnpm run build:mac
       env:
         CSC_IDENTITY_AUTO_DISCOVERY: false
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build for Linux
       if: matrix.os == 'ubuntu-latest'
@@ -78,6 +79,7 @@ jobs:
       env:
         ELECTRON_CACHE: /tmp/.cache/electron
         ELECTRON_BUILDER_CACHE: /tmp/.cache/electron-builder
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build for Windows
       if: matrix.os == 'windows-latest'
@@ -85,6 +87,7 @@ jobs:
       env:
         ELECTRON_CACHE: /tmp/.cache/electron
         ELECTRON_BUILDER_CACHE: /tmp/.cache/electron-builder
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Set safe artifact name
       id: artifact_name
