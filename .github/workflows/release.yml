@@ -2,16 +2,26 @@ name: Build and Release
 
 on:
   push:
-    branches: [ main ]
     tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        type: string
+      create_release:
+        description: 'Create GitHub release'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
 
@@ -19,43 +29,87 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '18'
-        cache: 'npm'
+        cache: 'pnpm'
+
+    - name: Cache Electron
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/electron
+          ~/.cache/electron-builder
+        key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-electron-
+
+    - name: Update package.json version (manual trigger)
+      if: github.event_name == 'workflow_dispatch'
+      run: |
+        VERSION=${{ github.event.inputs.version }}
+        echo "Updating package.json version to $VERSION"
+        node -e "
+          const fs = require('fs');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.version = '$VERSION';
+          fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+        "
 
     - name: Install dependencies
-      run: npm ci
+      run: pnpm install --no-frozen-lockfile
 
     - name: Build for macOS
       if: matrix.os == 'macos-latest'
-      run: npm run build:mac
+      run: pnpm run build:mac
       env:
         CSC_IDENTITY_AUTO_DISCOVERY: false
 
     - name: Build for Linux
       if: matrix.os == 'ubuntu-latest'
-      run: npm run build:linux
+      run: pnpm run build:linux
+      env:
+        ELECTRON_CACHE: /tmp/.cache/electron
+        ELECTRON_BUILDER_CACHE: /tmp/.cache/electron-builder
 
     - name: Build for Windows
       if: matrix.os == 'windows-latest'
+      run: pnpm run build:win
+      env:
+        ELECTRON_CACHE: /tmp/.cache/electron
+        ELECTRON_BUILDER_CACHE: /tmp/.cache/electron-builder
+
+    - name: Set safe artifact name
+      id: artifact_name
+      shell: bash
       run: |
-        npm install --global windows-build-tools || true
-        npm run build:win || echo "Windows build may require additional setup"
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          SAFE_NAME="${{ github.event.inputs.version }}"
+        else
+          SAFE_NAME="${{ github.ref_name }}"
+        fi
+        # Remove invalid characters for artifact names
+        SAFE_NAME=$(echo "$SAFE_NAME" | sed 's/[\/\:"<>|*?\r\n\\]/-/g')
+        echo "name=$SAFE_NAME" >> $GITHUB_OUTPUT
 
     - name: Upload macOS artifacts
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: macos-build
+        name: macos-build-${{ steps.artifact_name.outputs.name }}
         path: dist/*.dmg
 
     - name: Upload Linux artifacts
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: linux-build
+        name: linux-build-${{ steps.artifact_name.outputs.name }}
         path: |
           dist/*.AppImage
           dist/*.deb
@@ -64,13 +118,13 @@ jobs:
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
-        name: windows-build
+        name: windows-build-${{ steps.artifact_name.outputs.name }}
         path: dist/*.exe
 
   release:
     needs: build
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: (startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && github.event.inputs.create_release == 'true')) && always()
     
     steps:
     - name: Checkout code
@@ -78,6 +132,8 @@ jobs:
 
     - name: Download all artifacts
       uses: actions/download-artifact@v4
+      with:
+        pattern: "*-build-*"
 
     - name: Create Release
       id: create_release
@@ -85,10 +141,10 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref_name }}
-        release_name: Digital Signage App ${{ github.ref_name }}
+        tag_name: ${{ github.event.inputs.version || github.ref_name }}
+        release_name: Digital Signage App ${{ github.event.inputs.version || github.ref_name }}
         body: |
-          ## Changes in ${{ github.ref_name }}
+          ## Changes in ${{ github.event.inputs.version || github.ref_name }}
           
           Auto-generated release from GitHub Actions.
           
@@ -106,7 +162,7 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./macos-build/*.dmg
-        asset_name: digital-signage-app-${{ github.ref_name }}-mac.dmg
+        asset_name: digital-signage-app-${{ github.event.inputs.version || github.ref_name }}-mac.dmg
         asset_content_type: application/octet-stream
 
     - name: Upload Linux AppImage Release Asset
@@ -116,7 +172,7 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./linux-build/*.AppImage
-        asset_name: digital-signage-app-${{ github.ref_name }}-linux.AppImage
+        asset_name: digital-signage-app-${{ github.event.inputs.version || github.ref_name }}-linux.AppImage
         asset_content_type: application/octet-stream
 
     - name: Upload Linux DEB Release Asset
@@ -126,7 +182,7 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./linux-build/*.deb
-        asset_name: digital-signage-app-${{ github.ref_name }}-linux.deb
+        asset_name: digital-signage-app-${{ github.event.inputs.version || github.ref_name }}-linux.deb
         asset_content_type: application/octet-stream
 
     - name: Upload Windows Release Asset
@@ -136,5 +192,5 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./windows-build/*.exe
-        asset_name: digital-signage-app-${{ github.ref_name }}-windows.exe
+        asset_name: digital-signage-app-${{ github.event.inputs.version || github.ref_name }}-windows.exe
         asset_content_type: application/octet-stream
