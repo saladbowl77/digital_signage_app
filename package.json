@@ -1,0 +1,61 @@
+{
+  "name": "digital_signage_app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:linux": "node_modules/.bin/electron-builder --linux",
+    "build:mac": "node_modules/.bin/electron-builder --mac",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Your Name",
+    "email": "contact@rkwt.me"
+  },
+  "homepage": "https://github.com/yourusername/digital_signage_app",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^36.3.1",
+    "electron-builder": "^26.0.12"
+  },
+  "dependencies": {
+    "electron-store": "8.1.0",
+    "microcms-js-sdk": "^3.2.0"
+  },
+  "build": {
+    "appId": "me.rkwt.digital_signage_app",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "assets",
+      "src",
+      ".config",
+      "package.json",
+      "package-lock.json"
+    ],
+    "mac": {
+      "icon": "assets/mac_icon.icns",
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "icon": "assets/win_icon.ico",
+      "target": "nsis"
+    },
+    "linux": {
+      "icon": "assets/linux_icon.png",
+      "target": [
+        "AppImage",
+        "deb"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
