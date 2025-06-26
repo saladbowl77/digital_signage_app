@@ -1,0 +1,71 @@
+name: Build Check
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  build-check:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v2
+      with:
+        version: 8
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'pnpm'
+
+    - name: Cache Electron
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/electron
+          ~/.cache/electron-builder
+        key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-electron-
+
+    - name: Install dependencies
+      run: pnpm install --no-frozen-lockfile
+
+    - name: Build for macOS
+      if: matrix.os == 'macos-latest'
+      run: pnpm run build:mac
+      env:
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+
+    - name: Build for Linux
+      if: matrix.os == 'ubuntu-latest'
+      run: pnpm run build:linux
+      env:
+        ELECTRON_CACHE: /tmp/.cache/electron
+        ELECTRON_BUILDER_CACHE: /tmp/.cache/electron-builder
+
+    - name: Build for Windows
+      if: matrix.os == 'windows-latest'
+      run: pnpm run build:win
+      env:
+        ELECTRON_CACHE: /tmp/.cache/electron
+        ELECTRON_BUILDER_CACHE: /tmp/.cache/electron-builder
+
+    - name: Check build artifacts
+      shell: bash
+      run: |
+        echo "Build completed successfully for ${{ matrix.os }}"
+        ls -la dist/ || echo "No dist directory found"
