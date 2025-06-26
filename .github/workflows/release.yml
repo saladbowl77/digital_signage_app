@@ -18,7 +18,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 30
     
     strategy:
       fail-fast: false
@@ -52,6 +52,7 @@ jobs:
 
     - name: Update package.json version (manual trigger)
       if: github.event_name == 'workflow_dispatch'
+      shell: bash
       run: |
         VERSION=${{ github.event.inputs.version }}
         echo "Updating package.json version to $VERSION"
