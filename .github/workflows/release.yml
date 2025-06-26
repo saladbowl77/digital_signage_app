@@ -140,13 +140,10 @@ jobs:
         pattern: "*-build-*"
 
     - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.event.inputs.version || github.ref_name }}
-        release_name: Digital Signage App ${{ github.event.inputs.version || github.ref_name }}
+        name: Digital Signage App ${{ github.event.inputs.version || github.ref_name }}
         body: |
           ## Changes in ${{ github.event.inputs.version || github.ref_name }}
           
@@ -156,45 +153,10 @@ jobs:
           - **macOS**: Download the `.dmg` file
           - **Linux**: Download the `.AppImage` or `.deb` file
           - **Windows**: Download the `.exe` file
-        draft: false
-        prerelease: false
-
-    - name: Upload macOS Release Asset
-      uses: actions/upload-release-asset@v1
+        files: |
+          ./macos-build*/*.dmg
+          ./linux-build*/*.AppImage
+          ./linux-build*/*.deb
+          ./windows-build*/*.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./macos-build/*.dmg
-        asset_name: digital-signage-app-${{ github.event.inputs.version || github.ref_name }}-mac.dmg
-        asset_content_type: application/octet-stream
-
-    - name: Upload Linux AppImage Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./linux-build/*.AppImage
-        asset_name: digital-signage-app-${{ github.event.inputs.version || github.ref_name }}-linux.AppImage
-        asset_content_type: application/octet-stream
-
-    - name: Upload Linux DEB Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./linux-build/*.deb
-        asset_name: digital-signage-app-${{ github.event.inputs.version || github.ref_name }}-linux.deb
-        asset_content_type: application/octet-stream
-
-    - name: Upload Windows Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./windows-build/*.exe
-        asset_name: digital-signage-app-${{ github.event.inputs.version || github.ref_name }}-windows.exe
-        asset_content_type: application/octet-stream
