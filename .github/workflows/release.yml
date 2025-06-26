@@ -21,6 +21,7 @@ on:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     
     strategy:
       matrix:
@@ -40,6 +41,16 @@ jobs:
       with:
         node-version: '18'
         cache: 'pnpm'
+
+    - name: Cache Electron
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/electron
+          ~/.cache/electron-builder
+        key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json', '**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-electron-
 
     - name: Update package.json version (manual trigger)
       if: github.event_name == 'workflow_dispatch'
@@ -65,10 +76,16 @@ jobs:
     - name: Build for Linux
       if: matrix.os == 'ubuntu-latest'
       run: pnpm run build:linux
+      env:
+        ELECTRON_CACHE: /tmp/.cache/electron
+        ELECTRON_BUILDER_CACHE: /tmp/.cache/electron-builder
 
     - name: Build for Windows
       if: matrix.os == 'windows-latest'
       run: pnpm run build:win
+      env:
+        ELECTRON_CACHE: /tmp/.cache/electron
+        ELECTRON_BUILDER_CACHE: /tmp/.cache/electron-builder
 
     - name: Upload macOS artifacts
       if: matrix.os == 'macos-latest'
