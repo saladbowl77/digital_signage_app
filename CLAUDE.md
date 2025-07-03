@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm start` - Start development mode (launches Electron app)
 - `npm run build:mac` - Build for macOS (creates .dmg)
 - `npm run build:linux` - Build for Linux (creates AppImage and .deb)
+- `npm run build:win` - Build for Windows (creates NSIS installer)
 
 ## Architecture Overview
 
@@ -34,6 +35,8 @@ This is an Electron-based digital signage application that displays content from
 **Window Manager (`src/windows/window-manager.js`)**
 - Manages main application window and settings window lifecycle
 - Handles window communication and menu setup
+- Main window starts in fullscreen mode with ESC key to exit
+- Settings window is modal and accessible via Cmd/Ctrl+, or menu
 
 ### Data Flow
 
@@ -72,3 +75,5 @@ Settings are stored in electron-store under `userSettings`:
 - Content updates automatically every minute
 - Slide speed changes are applied immediately when saved via settings
 - All IPC communication flows through preload.js for security
+- Dev tools can be enabled via settings and will auto-open on startup if enabled
+- Content supports both image and iframe types from MicroCMS
