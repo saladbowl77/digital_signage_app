@@ -68,32 +68,8 @@ class MicroCMSService {
     }
   }
 
-  getCurrentDayOfWeek() {
-    const days = ['日', '月', '火', '水', '木', '金', '土'];
-    const today = new Date();
-    return days[today.getDay()];
-  }
-
-  getCurrentWeekOfMonth() {
-    const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const firstDayOfWeek = firstDayOfMonth.getDay();
-    const adjustedDate = today.getDate() + firstDayOfWeek - 1;
-    const weekNumber = Math.ceil(adjustedDate / 7);
-    
-    if (weekNumber === 1) return '第1週';
-    if (weekNumber === 2) return '第2週';
-    if (weekNumber === 3) return '第3週';
-    if (weekNumber === 4) return '第4週';
-    if (weekNumber === 5) return '第5週';
-    return '第1週';
-  }
-
   processContent(contentData, managementData) {
     if (contentData && contentData.contents && contentData.contents.length > 0 && managementData && managementData.contents && managementData.contents.length) {
-      const currentDay = this.getCurrentDayOfWeek();
-      const currentWeek = this.getCurrentWeekOfMonth();
-      
       return contentData.contents.map((item) => {
         let processedItem = null;
         const manage = managementData.contents.find(contentData => contentData.id === item.id);
@@ -123,19 +99,7 @@ class MicroCMSService {
         }
         
         return processedItem;
-      }).filter(item => {
-        if (!item) return false;
-        
-        if (!item.weekDay || !Array.isArray(item.weekDay) || item.weekDay.length === 0) {
-          return true;
-        }
-        
-        return item.weekDay.some(dayInfo => {
-          const dayMatches = dayInfo.day[0] === currentDay;
-          const weekMatches = dayInfo.week[0] === '毎週' || dayInfo.week[0] === currentWeek;
-          return dayMatches && weekMatches;
-        });
-      });
+      }).filter(item => item !== null);
     }
 
     return []
