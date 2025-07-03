@@ -1,10 +1,12 @@
 const { createClient } = require('microcms-js-sdk');
 const Store = require('electron-store');
+const https = require('https');
 
 class MicroCMSService {
   constructor() {
-    this.client = null;
     this.store = new Store();
+    this.serviceDomain = '';
+    this.apiKey = '';
     this.endpoint = '';
   }
 
@@ -17,8 +19,6 @@ class MicroCMSService {
     };
 
     console.log('MicroCMS設定を読み込み:', settings);
-
-    this.endpoint = settings.endpoint;
     
     if (!settings.serviceDomain || !settings.apiKey || !settings.endpoint) {
       console.warn('MicroCMS設定が未設定です。設定画面で設定してください。');
@@ -32,10 +32,19 @@ class MicroCMSService {
       serviceDomain: settings.serviceDomain,
       apiKey: settings.apiKey,
     });
+
+    this.serviceDomain = settings.serviceDomain;
+    this.apiKey = settings.apiKey;
+    this.endpoint = settings.endpoint;
+
     console.log('MicroCMSクライアント初期化完了');
   }
 
   async fetchContents() {
+    if (!this.serviceDomain || !this.apiKey || !this.endpoint) {
+      console.warn('MicroCMS設定が未設定です。設定画面で設定してください。');
+    }
+
     if (!this.client) {
       this.initialize();
     }
@@ -46,10 +55,11 @@ class MicroCMSService {
     }
     
     try {
-      const response = await this.client.get({
+      const contentApi = await this.client.get({
         endpoint: this.endpoint, 
       });
-      const data = this.processContent(response);
+      const managementApi = await this.requestManagementApi();
+      const data = this.processContent(contentApi, managementApi);
       console.log(data);
       return data;
     } catch (error) {
@@ -79,25 +89,32 @@ class MicroCMSService {
     return '第1週';
   }
 
-  processContent(data) {
-    if (data && data.contents && data.contents.length > 0) {
+  processContent(contentData, managementData) {
+    if (contentData && contentData.contents && contentData.contents.length > 0 && managementData && managementData.contents && managementData.contents.length) {
       const currentDay = this.getCurrentDayOfWeek();
       const currentWeek = this.getCurrentWeekOfMonth();
       
-      return data.contents.map((item) => {
+      return contentData.contents.map((item) => {
         let processedItem = null;
+        const manage = managementData.contents.find(contentData => contentData.id === item.id);
         
         if (item.type[0] == "image") {
           processedItem = {
             id: item.id,
             type: "image",
-            url: item.img.url
+            url: item.img.url,
+            status: manage.status[0] ?? null,
+            reservationPublishTime: manage.reservationTime?.publishTime ?? null,
+            reservationStopTime: manage.reservationTime?.stopTime  ?? null,
           }
         } else if (item.type[0] == "iframe" && item.iframeUrl) {
           processedItem = {
             id: item.id,
             type: "iframe",
-            url: item.iframeUrl
+            url: item.iframeUrl,
+            status: manage.status[0] ?? null,
+            reservationPublishTime: manage.reservationTime?.publishTime  ?? null,
+            reservationStopTime: manage.reservationTime?.stopTime  ?? null,
           }
         }
         
@@ -122,6 +139,44 @@ class MicroCMSService {
     }
 
     return []
+  }
+
+  async requestManagementApi() {
+    return new Promise((resolve, reject) => {
+      const url = `https://${this.serviceDomain}.microcms-management.io/api/v1/contents/${this.endpoint}`;
+      const options = {
+        headers: {
+          'X-MICROCMS-API-KEY': this.apiKey,
+          depth: 2,
+        }
+      };
+      https.get(url, options, (response) => {
+        let data = '';
+        
+        response.on('data', (chunk) => {
+          data += chunk;
+        });
+        
+        response.on('end', () => {
+          console.log('Request to api completed');
+          try {
+            const jsonData = JSON.parse(data);
+            resolve(jsonData);
+          } catch (error) {
+            console.error('Failed to parse JSON:', error);
+            reject(error);
+          }
+        });
+        
+        response.on('error', (error) => {
+          console.error('Request to api failed:', error);
+          reject(error);
+        });
+      }).on('error', (error) => {
+        console.error('Request to api failed:', error);
+        reject(error);
+      });
+    });
   }
 }
 
