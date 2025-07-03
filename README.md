@@ -1,13 +1,15 @@
 # Digital Signage App
 
-Electronベースのデジタルサイネージアプリケーション。MicroCMSから画像・動画コンテンツを取得し、スライドショー形式で表示します。
+Electronベースのデジタルサイネージアプリケーション。MicroCMSから画像・iframeコンテンツを取得し、スライドショー形式で表示します。曜日・週別のスケジュール機能により、コンテンツの表示タイミングを細かく制御できます。
 
 ## 主な機能
 
 - **MicroCMSコンテンツ管理**: 画像・iframeコンテンツをMicroCMSから取得
-- **スケジュール機能**: 曜日・週別の表示制御
-- **スライドショー**: 自動切替機能（速度設定可能）
-- **設定画面**: MicroCMS設定・スライド速度設定
+- **スケジュール機能**: 曜日・週別の表示制御（毎週・第1〜5週の指定可能）
+- **スライドショー**: 自動切替機能（速度設定可能・即座に反映）
+- **設定画面**: MicroCMS設定・スライド速度設定・開発者ツール切替
+- **フルスクリーン表示**: 起動時自動フルスクリーン（ESCキーで終了）
+- **自動更新**: 1分間隔でコンテンツを自動更新
 
 ## 技術スタック
 
@@ -22,6 +24,8 @@ Electronベースのデジタルサイネージアプリケーション。MicroC
 
 ```bash
 npm install
+# または
+pnpm install
 ```
 
 ### 2. MicroCMSの設定
@@ -37,15 +41,15 @@ npm install
 ```json
 {
   "id": "string",
-  "type": ["image", "iframe"],
+  "type": "image" | "iframe"[],
   "img": {
-    "url": "string"
+    "url": string
   },
-  "iframeUrl": "string",
+  "iframeUrl": string,
   "weekDay": [
     {
-      "week": "毎週",
-      "day": "月"
+      "week": string[],
+      "day": string[]
     }
   ]
 }
@@ -73,16 +77,18 @@ npm start
 ### ビルド
 
 ```bash
-npm run build:mac (Mac用)
-npm run build:linux (Linux用)
+npm run build:mac     # Mac用（.dmg作成）
+npm run build:linux   # Linux用（AppImage・.deb作成）
+npm run build:win     # Windows用（NSIS installer作成）
 ```
 
 ### 設定画面
 
-1. メニューから「設定」を選択(もしくは、「`⌘ + ,` or `^ + ,`」)
+1. メニューから「設定」を選択（または `⌘ + ,` / `Ctrl + ,`）
 2. MicroCMS設定とスライド速度を設定
 3. 保存ボタンで設定を保存
-4. アプリケーションを再起動して設定を反映
+4. MicroCMS設定の変更時はアプリケーションを再起動
+5. スライド速度の変更は即座に反映
 
 ## スケジュール機能
 
@@ -150,7 +156,12 @@ src/
 
 ### デバッグ
 
-設定画面で「開発者ツールを表示」をチェックすると、開発者ツールが表示されます。
+設定画面で「開発者ツールを表示」をチェックすると、開発者ツールが表示されます。この設定は次回起動時にも自動的に適用されます。
+
+### キーボードショートカット
+
+- `ESC`: フルスクリーン終了
+- `⌘ + ,` / `Ctrl + ,`: 設定画面を開く
 
 ### 設定ファイル
 
@@ -159,6 +170,13 @@ src/
 - **macOS**: `~/Library/Application Support/digital_signage_app/config.json`
 - **Windows**: `%APPDATA%\digital_signage_app\config.json`
 - **Linux**: `~/.config/digital_signage_app/config.json`
+
+### アーキテクチャ
+
+- **メインプロセス**: サービスとウィンドウの管理
+- **レンダラープロセス**: スライドショー表示
+- **IPCセキュリティ**: preload.jsによる安全な通信
+- **自動更新**: 1分間隔でのコンテンツ取得・更新
 
 ## トラブルシューティング
 
